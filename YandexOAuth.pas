@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Net.URLClient, System.Net.HttpClient,
-  System.Net.URLConsts, System.JSON, FMX.WebBrowser, System.Threading;
+  System.JSON, FMX.WebBrowser, System.Threading, FMX.Platform, FMX.Types;
 
 type
   /// <summary>
@@ -27,13 +27,14 @@ type
     FOnTokenReceived: TOnTokenReceived;
     FCurrentTask: ITask;
     
-    procedure HandleNavigationEnd(const ASender: TObject; const AURL: string);
+    procedure HandleNavigation(const ASender: TObject; const AURL: string);
     function ExtractCodeFromURL(const AURL: string): string;
     function ExchangeCodeForToken(const ACode: string): string;
     procedure ParseTokenResponse(const AJSONResponse: string; out AAccessToken, 
       ARefreshToken: string; out AExpiresIn: Integer; out AError: string);
     procedure ShowAuthPage;
     procedure CloseWebBrowser;
+    function URLEncode(const AValue: string): string;
   public
     /// <summary>
     /// Конструктор класса
@@ -101,9 +102,29 @@ procedure TYandexOAuth.CloseWebBrowser;
 begin
   if Assigned(FWebBrowser) then
   begin
-    FWebBrowser.OnNavigationEnd := nil;
+    FWebBrowser.OnNavigation := nil;
     FWebBrowser.Visible := False;
     FreeAndNil(FWebBrowser);
+  end;
+end;
+
+function TYandexOAuth.URLEncode(const AValue: string): string;
+var
+  i: Integer;
+  ch: Char;
+begin
+  Result := '';
+  for i := 1 to Length(AValue) do
+  begin
+    ch := AValue[i];
+    case ch of
+      'A'..'Z', 'a'..'z', '0'..'9', '-', '_', '.', '~':
+        Result := Result + ch;
+      ' ':
+        Result := Result + '+';
+    else
+      Result := Result + '%' + IntToHex(Ord(ch), 2);
+    end;
   end;
 end;
 
@@ -116,7 +137,7 @@ begin
   AuthURL := 'https://oauth.yandex.ru/authorize?' +
              'response_type=code&' +
              'client_id=' + FClientID + '&' +
-             'redirect_uri=' + TNetEncoding.URL.Encode(FRedirectURI) + '&' +
+             'redirect_uri=' + URLEncode(FRedirectURI) + '&' +
              'state=delphi_fmx_oauth';
   
   // Создаем веб-браузер для отображения страницы авторизации
@@ -124,7 +145,7 @@ begin
   try
     FWebBrowser.Align := TAlignLayout.Client;
     FWebBrowser.Visible := True;
-    FWebBrowser.OnNavigationEnd := HandleNavigationEnd;
+    FWebBrowser.OnNavigation := HandleNavigation;
     
     // Добавляем веб-браузер на главную форму приложения
     // Примечание: В реальном приложении нужно передавать ссылку на форму
@@ -142,7 +163,7 @@ begin
   end;
 end;
 
-procedure TYandexOAuth.HandleNavigationEnd(const ASender: TObject; const AURL: string);
+procedure TYandexOAuth.HandleNavigation(const ASender: TObject; const AURL: string);
 var
   Code: string;
 begin
@@ -162,10 +183,11 @@ begin
       var
         AccessToken, RefreshToken, ErrorMsg: string;
         ExpiresIn: Integer;
+        TokenResponse: string;
       begin
         try
-          ExchangeCodeForToken(Code);
-          ParseTokenResponse(ExchangeCodeForToken(Code), AccessToken, RefreshToken, ExpiresIn, ErrorMsg);
+          TokenResponse := ExchangeCodeForToken(Code);
+          ParseTokenResponse(TokenResponse, AccessToken, RefreshToken, ExpiresIn, ErrorMsg);
           
           if Assigned(FOnTokenReceived) then
             TThread.Synchronize(nil, procedure
@@ -239,7 +261,7 @@ begin
     Params.Add('code=' + ACode);
     Params.Add('client_id=' + FClientID);
     Params.Add('client_secret=' + FClientSecret);
-    Params.Add('redirect_uri=' + TNetEncoding.URL.Encode(FRedirectURI));
+    Params.Add('redirect_uri=' + URLEncode(FRedirectURI));
     
     // Отправляем POST запрос на сервер Яндекс
     Response := HTTPClient.Post('https://oauth.yandex.ru/token', Params);

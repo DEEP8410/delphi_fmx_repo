@@ -27,7 +27,7 @@ type
     FOnTokenReceived: TOnTokenReceived;
     FCurrentTask: ITask;
     
-    procedure HandleNavigation(const ASender: TObject; const AURL: string);
+    procedure HandleDidStartLoad(const ASender: TObject; const AURL: string);
     function ExtractCodeFromURL(const AURL: string): string;
     function ExchangeCodeForToken(const ACode: string): string;
     procedure ParseTokenResponse(const AJSONResponse: string; out AAccessToken, 
@@ -102,7 +102,7 @@ procedure TYandexOAuth.CloseWebBrowser;
 begin
   if Assigned(FWebBrowser) then
   begin
-    FWebBrowser.OnNavigate := nil;
+    FWebBrowser.OnDidStartLoad := nil;
     FWebBrowser.Visible := False;
     FreeAndNil(FWebBrowser);
   end;
@@ -145,7 +145,7 @@ begin
   try
     FWebBrowser.Align := TAlignLayout.Client;
     FWebBrowser.Visible := True;
-    FWebBrowser.OnNavigate := HandleNavigation;
+    FWebBrowser.OnDidStartLoad := HandleDidStartLoad;
     
     // Добавляем веб-браузер на главную форму приложения
     // Примечание: В реальном приложении нужно передавать ссылку на форму
@@ -163,12 +163,12 @@ begin
   end;
 end;
 
-procedure TYandexOAuth.HandleNavigation(const ASender: TObject; const AURL: string);
+procedure TYandexOAuth.HandleDidStartLoad(const ASender: TObject; const AURL: string);
 var
   Code: string;
 begin
   // Проверяем, является ли текущий URL адресом перенаправления
-  // Для события OnNavigate параметр AURL содержит новый URL
+  // Для события OnDidStartLoad параметр AURL содержит новый URL
   if Pos(FRedirectURI, AURL) > 0 then
   begin
     // Извлекаем код авторизации из URL

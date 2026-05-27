@@ -1,1 +1,1 @@
-Nothing should be ignored based on the provided file changes. The modification of 'YandexOAuth.pas' is a source code file that should not be added to .gitignore.
+Nothing needs to be added to .gitignore since only a Pascal source file (.pas) was modified and no build artifacts, dependencies, or temporary files were included in the changes.

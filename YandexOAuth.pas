@@ -102,7 +102,7 @@ procedure TYandexOAuth.CloseWebBrowser;
 begin
   if Assigned(FWebBrowser) then
   begin
-    FWebBrowser.OnNavigation := nil;
+    FWebBrowser.OnNavigate := nil;
     FWebBrowser.Visible := False;
     FreeAndNil(FWebBrowser);
   end;
@@ -145,7 +145,7 @@ begin
   try
     FWebBrowser.Align := TAlignLayout.Client;
     FWebBrowser.Visible := True;
-    FWebBrowser.OnNavigation := HandleNavigation;
+    FWebBrowser.OnNavigate := HandleNavigation;
     
     // Добавляем веб-браузер на главную форму приложения
     // Примечание: В реальном приложении нужно передавать ссылку на форму
@@ -168,6 +168,7 @@ var
   Code: string;
 begin
   // Проверяем, является ли текущий URL адресом перенаправления
+  // Для события OnNavigate параметр AURL содержит новый URL
   if Pos(FRedirectURI, AURL) > 0 then
   begin
     // Извлекаем код авторизации из URL
